@@ -1,0 +1,93 @@
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: Batman!123
+    command: server /data --console-address ":9001"
+    volumes:
+      - landing_data:/data
+    networks:
+      - flights
+  nifi:
+    image: apache/nifi:latest
+    ports:
+      - "8443:8443"
+    environment:
+      NIFI_WEB_HTTP_PORT: 8443
+      SINGLE_USER_CREDENTIALS_USERNAME: admin
+      SINGLE_USER_CREDENTIALS_PASSWORD: Batman!12345
+    volumes:
+      - nifi_data:/opt/nifi/nifi-current/data
+    networks:
+      - flights
+
+  spark-master:
+    image: bitnami/spark:latest
+    ports:
+      - "8080:8080" # Spark Master UI
+      - "7077:7077"
+    environment:
+      - SPARK_MODE=master
+  spark-worker:
+    image: bitnami/spark:latest
+    ports:
+      - "8081:8080"
+    depends_on:
+      - spark-master
+    volumes:
+      - spark_data:/opt/bitnami/spark/data
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+  jupyter:
+    image: jupyter/pyspark-notebook:latest # Or a custom image with PySpark
+    ports:
+      - "8888:8888" # Jupyter Notebook UI
+    volumes:
+      - ./notebooks:/home/jovyan/work # Mount a local directory for notebooks
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+    depends_on:
+      - spark-master
+      - spark-worker
+    networks:
+      - flights
+  db:
+    image: mariadb:latest
+    environment:
+      MARIADB_USER: admin
+      MARIADB_DATABASE: airplanes
+      MARIADB_PASSWORD: Batman!123
+      MARIADB_ROOT_PASSWORD: Batman!123
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - flights
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - flights
+volumes:
+  db_data:
+  spark_data:
+  nifi_data:
+  grafana_data:
+  landing_data:
+
+networks:
+  flights:
+    driver: bridge
