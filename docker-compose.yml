@@ -22,6 +22,7 @@ services:
       SINGLE_USER_CREDENTIALS_PASSWORD: Batman!12345
     volumes:
       - nifi_data:/opt/nifi/nifi-current/data
+      - nifi_conf:/opt/nifi/nifi-current/conf
     networks:
       - flights
 
@@ -85,6 +86,7 @@ volumes:
   db_data:
   spark_data:
   nifi_data:
+  nifi_conf:
   grafana_data:
   landing_data:
 
